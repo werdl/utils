@@ -9,3 +9,4 @@
 - [xtra](xtra) - `c` Some bonus C headers to make your life easier
 
 ## Screenshot
+![tedit running inside wsh](teditinsidewsh.png)
