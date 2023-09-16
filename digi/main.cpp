@@ -4,10 +4,16 @@
 #include <cstdbool>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "nlohmann/json"
+#include <string>
+#include <time.h>
+#include <fstream>
+#include <iostream>
 
-int create(char ** args) {
-    printf("%s", args[1]);
-}
+using json=nlohmann::json;
+
+#define DIGI_VERSION "0.1"
+
 #define error(s) printf("Error - %s",s)
 #define INIT_BUF 1024
 #define DELIMS " \t\r\n"
@@ -39,8 +45,10 @@ char ** SplitLine(char * line) {
     return tokens;
 }
 char * cmds[]={
-    "create"
+    "create",
+    "newthing"
 };
+std::string current="";
 #define NumCmds (int)(sizeof(cmds)/sizeof(char *))
 int CmdCd(char ** args) {
     if (args[1]==NULL) error("Insufficient args error for \"cd\"");
@@ -49,16 +57,66 @@ int CmdCd(char ** args) {
     }
     return 1;
 }
+json jnewthing(std::string name, std::string desc, std::string time) {
+    json thing;
+    thing["name"]=name;
+    thing["desc"]=desc;
+    thing["time"]=time;
+    return thing;
+}
+int create(char ** args) {
+    std::ofstream fp;
+    fp.open((strcat(args[1],".digi.json")));
+    json digi,desc;
+    desc["name"]=args[1];
+    desc["timestamp"]=(int)time(NULL);
+    desc["digi_v"]=DIGI_VERSION;
+
+    digi["desc"]=desc;
+
+    digi["things"]={};
+
+    fp << digi.dump(4);
+
+    fp.close();
+    current=(strcat(args[1],".digi.json"));
+}
+int newthing(char ** args) {
+    std::string endres;
+    std::fstream f;
+	f.open(current, std::ios::in);
+    char ch;
+
+    while (1) {
+        f >> ch;
+        if (f.eof())
+            break;
+        endres+=ch;
+    }
+
+    json digi=json::parse(endres);
+
+    digi["things"]+=jnewthing(args[1],args[2],args[3]);
+	
+    f << digi.dump(4);
+    f.close();
+    std::cout << "hey";
+}
 int (*CmdFunctions[])(char **) = {
-    &create
+    &create,
+    &newthing
 };
 int execute(char ** args) {
     if (args[0]==NULL) return 1;
     for (int i=0;i<NumCmds;i++) {
-        if (!strcmp(args[0],cmds[i])) return (*CmdFunctions[i])(args);
+        if (!strcmp(args[0],cmds[i]))  {
+            printf("\n");
+            return (*CmdFunctions[i])(args);
+        }
     }
     return 0;
 }
+
 int main(int argc, char ** argv) {
     while (1) {
         execute(SplitLine(ReadLine()));

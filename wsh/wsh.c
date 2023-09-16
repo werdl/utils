@@ -40,7 +40,10 @@ char * ReadLine(void) {
     strcpy(strbuf,"/home/");
     getcwd(buf,INIT_BUF);  
     getlogin_r(usrbuf,INIT_BUF);
-    strrep(buf,strcat(strbuf,usrbuf),"~");
+    strcat(strbuf,usrbuf);
+    if (!strncmp(buf,strbuf,strlen(strbuf))) {
+        strrep(buf,strbuf,"~");
+    }
     printf("%s@%s [%s] %s ",usrbuf,hostbuf,buf,(!strcmp(usrbuf,"root"))?"#":"$");
     if (getline(&line, &bs, stdin)==-1) error("EOF entered");
     return line;
