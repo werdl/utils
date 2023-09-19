@@ -1,4 +1,4 @@
-from math import sqrt
+import math
 import re
 class equation:
     def __init__(self):
@@ -24,13 +24,17 @@ class equation:
         self.eq+=(("*" if self.eq[-1].isnumeric() else "")+"(") if lr=="l" else ")"
     def nthroot(self,base,n):
         self.eq+=f"{base}**(1/{n})"
+    def math(self,func,*args):
+        if hasattr(math,func):
+            rg=', '.join([' '.join(str(arg)) for arg in args])
+ 
+            self.eq+=f"math.{func}({rg})"
+            
     def __str__(self):
         print(self.eq)
         print(eval(self.eq))
         return f"{self.eq}->{eval(self.eq)}"
 
 eq=equation()
-eq.digit(2)
-eq.op("^")
-eq.digit(3)
+eq.math("pow",2,8)
 print(eq)
