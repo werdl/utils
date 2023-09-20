@@ -45,11 +45,11 @@ char ** SplitLine(char * line) {
     return tokens;
 }
 char * cmds[]={
-    "create",
-    "newthing"
+    "newthing",
+    "create"
 };
 std::string current="";
-#define NumCmds (int)(sizeof(cmds)/sizeof(char *))
+#define NumCmds 2
 int CmdCd(char ** args) {
     if (args[1]==NULL) error("Insufficient args error for \"cd\"");
     else {
@@ -62,6 +62,7 @@ json jnewthing(std::string name, std::string desc, std::string time) {
     thing["name"]=name;
     thing["desc"]=desc;
     thing["time"]=time;
+    std::cout << thing.dump(4);
     return thing;
 }
 int create(char ** args) {
@@ -100,7 +101,6 @@ int newthing(char ** args) {
 	
     f << digi.dump(4);
     f.close();
-    std::cout << "hey";
 }
 int (*CmdFunctions[])(char **) = {
     &create,
@@ -109,6 +109,7 @@ int (*CmdFunctions[])(char **) = {
 int execute(char ** args) {
     if (args[0]==NULL) return 1;
     for (int i=0;i<NumCmds;i++) {
+        std::cout << cmds[i];
         if (!strcmp(args[0],cmds[i]))  {
             printf("\n");
             return (*CmdFunctions[i])(args);
