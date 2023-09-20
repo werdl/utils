@@ -1,3 +1,8 @@
+#!/usr/bin/python4
+
+"""
+werdl wrote this code
+"""
 import os
 import logging
 import sys
@@ -16,6 +21,18 @@ class wsvc():
         for item in os.listdir():
             if item.startswith("wsvc-commit") and os.path.isdir(item):
                 shutil.rmtree(item)
+        with open(".wsvc/config.json", "r") as config:
+            data = json.load(config)
+        self.user=data["user"]
+    def setuser(self,user) -> None:
+        """Set the user value used for all commits"""
+        self.user=user
+
+        with open(".wsvc/config.json", "r") as config:
+            data = json.load(config)
+            data["user"]=user
+        with open(".wsvc/config.json", "w") as config:
+            config.write(json.dumps(data))
     def create(self, reponame: str, latestname: str="latest",force=False) -> bool:
         """Initialize wsvc repo (name `reponame`)at `savedir`, overwriting if `force`"""
         if not os.path.exists(".wsvc"):
@@ -27,7 +44,7 @@ class wsvc():
                 logging.error("Path not created, dir already exists")
                 sys.exit(-1)
         with open(".wsvc/config.json", "w") as config:
-            data = json.dumps({"name": reponame, "created": strftime("%Y-%m-%d %H:%M:%S", gmtime()),"latestmsg":latestname})
+            data = json.dumps({"name": reponame, "created": strftime("%Y-%m-%d %H:%M:%S", gmtime()),"latestmsg":latestname},"user":"anon")
             config.write(data)
         return 1
     def check(self) -> bool:
@@ -49,8 +66,7 @@ class wsvc():
                 with open(file_path) as f:
                     content = f.read()
                     tempserial[file_path] = content
-
-        self.currentstate = pickle.dumps(tempserial).hex()
+        self.currentstate = pickle.dumps(tempserial).hex() + ":" + pickle.dumps(self.user).hex()
         return 1
 
     def stash(self, commitmsg) -> bool:
@@ -91,8 +107,9 @@ class wsvc():
                 print(f"Multiple matches found. Selecting last commit.")
         with open(".wsvc/" + sortedpots[-1][0]) as f:
             contents = f.read().replace("\n", "")
-            file_contents = pickle.loads(bytes.fromhex(contents))
-        
+            filecontent=contents.split(":")[0]
+            file_contents = pickle.loads(bytes.fromhex(filecontent))
+            print(f"This commit, which was created on {str((sortedpots[-1][0])).split('-')[1]} is authored by  {(bytes.fromhex(contents.split(':')[1])).decode(encoding='utf-8', errors='ignore')}") # grab data from the file
         for file_path, value in file_contents.items():
             file_directory, file_name = os.path.split(file_path)
             file_directory = os.path.join(commit_directory, file_directory)
@@ -145,11 +162,11 @@ class wsvc():
         session.storbinary(f'STOR public_html/wsvc/{data["name"]}.wsvc', file)     # send the file
         file.close()                                    # close file and FTP
         session.quit()
-    def grab_remote(self,name):
-        import requests
-        response = requests.get(f"werdl.000webhostapp.com/wsvc/{name}.wsvc")
-        data = response.text
-        self.currentstate=data
+    # def grab_remote(self,name):
+    #     import requests
+    #     response = requests.get(f"werdl.000webhostapp.com/wsvc/{name}.wsvc")
+    #     data = response.text
+    #     self.currentstate=data
 class wsvcException(Exception):
     def __init__(self,msg):
         self.msg=msg
@@ -219,6 +236,10 @@ if len(sys.argv) > 1:
 # push - stash under latest
 required: None
 optional: commitname for duplicate
+                  
+# setuser - set the current user (by default 'anon')
+required: user
+optional: None
 """)
     elif action=="push":
         instance.serialize()
@@ -226,10 +247,11 @@ optional: commitname for duplicate
             instance.stash(json.loads(config.read())["latestmsg"])
         if len(sys.argv)>2:
             instance.stash(sys.argv[2])
+    elif action=="setuser":
+        err()
+        instance.setuser(sys.argv[2])
     elif action=="pushrem":
         instance.push_remote()
-    elif action=="grabrem":
-        instance.grab_remote()
     else:
         print("Invalid action")
 else:
