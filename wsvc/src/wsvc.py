@@ -1,4 +1,4 @@
-#!/usr/bin/python4
+#!/usr/bin/python3
 
 """
 werdl wrote this code
@@ -11,6 +11,9 @@ import pickle
 import shutil
 import inspect
 from time import gmtime, strftime, time
+import requests
+import ftplib
+import bs4
 
 
 class wsvc():
@@ -44,7 +47,7 @@ class wsvc():
                 logging.error("Path not created, dir already exists")
                 sys.exit(-1)
         with open(".wsvc/config.json", "w") as config:
-            data = json.dumps({"name": reponame, "created": strftime("%Y-%m-%d %H:%M:%S", gmtime()),"latestmsg":latestname},"user":"anon")
+            data = json.dumps({"name": reponame, "created": strftime("%Y-%m-%d %H:%M:%S", gmtime()),"latestmsg":latestname,"user":self.user})
             config.write(data)
         return 1
     def check(self) -> bool:
@@ -85,7 +88,6 @@ class wsvc():
         if dir!="wsvc-commit":
             print("Overwriting current directory, -r/--restore flag given.")
         potentials = {}
-        print(files)
         for file in files:
             if ".wsvccommit" in file:
                 pass
@@ -138,35 +140,40 @@ class wsvc():
     def delete(self):
         shutil.rmtree(".wsvc")
     def push_remote(self):
-        with open("credentials.json") as c:
+        with open(".wsvc/credentials.json") as c:
             con=c.read()
             content=json.loads(con)
-        import ftplib
-        session = ftplib.FTP(content["server"],content["user"],content["pass"])
-        files = next(os.walk(".wsvc"), (None, None, []))[2]
-        potentials = {}
-        for file in files:
-            if ".wsvccommit" in file:
-                pass
-            else:
-                continue
-            _temp = file.split("-")
-            name = _temp[1].split(".")[0]
-            ts = _temp[0]
-            if name == "latest":
-                potentials[file] = ts
-        sortedpots = sorted(potentials.items(), key=lambda item: item[1])
-        file = open(".wsvc/" + sortedpots[-1][0],'rb')                  # file to send
-        with open(".wsvc/config.json") as conf:
-            data=json.loads(conf.read())
-        session.storbinary(f'STOR public_html/wsvc/{data["name"]}.wsvc', file)     # send the file
-        file.close()                                    # close file and FTP
-        session.quit()
-    # def grab_remote(self,name):
-    #     import requests
-    #     response = requests.get(f"werdl.000webhostapp.com/wsvc/{name}.wsvc")
-    #     data = response.text
-    #     self.currentstate=data
+        self.set_remote(content["server"], content["dir"], content["user"], content["pass"])
+    def pull(self):
+        with open(".wsvc/credentials.json") as c:
+            con=c.read()
+            content=json.loads(con)
+        url=f"https://{content['server']}/{content['dir']+'/' if content['dir']!='public_html' else ''}wsvc"
+        print(url)
+        r = requests.get(url)
+        data = bs4.BeautifulSoup(r.text, "html.parser")
+        for l in data.find_all("a"):
+            r = requests.get(url + l["href"])
+
+            with open(f".wsvc/{l['href']}", "w") as file:
+                file.write(r.text)
+
+
+    def set_remote(self, addr, dirr, user, password):
+        with open(".wsvc/credentials.json", "w") as conf:
+            out={
+                "server": addr,
+                "user": user,
+                "pass": password,
+                "dir": dirr
+            }
+            conf.write(json.dumps(out))
+        session = ftplib.FTP(out["server"],out["user"],out["pass"])
+        for root, _, files in os.walk('.wsvc'):
+            for fname in files:
+                if fname.split(".")[1]=="wsvccommit" or fname.split(".")[1]=="json":
+                    session.storbinary(f'STOR {dirr}/wsvc/{fname}.wsvc', open(".wsvc/"+fname
+, 'rb'))  
 class wsvcException(Exception):
     def __init__(self,msg):
         self.msg=msg
@@ -232,11 +239,11 @@ if len(sys.argv) > 1:
 # help - print this page
 - required: None
 - optional: funcname (help for a specific function)
-	
+
 # push - stash under latest
 required: None
 optional: commitname for duplicate
-                  
+
 # setuser - set the current user (by default 'anon')
 required: user
 optional: None
@@ -252,6 +259,11 @@ optional: None
         instance.setuser(sys.argv[2])
     elif action=="pushrem":
         instance.push_remote()
+    elif action=="pull":
+        instance.pull()
+    elif action=="setrem":
+        err(5)
+        instance.set_remote(sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5])
     else:
         print("Invalid action")
 else:
