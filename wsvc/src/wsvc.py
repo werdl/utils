@@ -138,13 +138,16 @@ class wsvc():
         else:
             return f"{function} is not a valid wsvc operation"
     def delete(self):
+        """Deletes the repo"""
         shutil.rmtree(".wsvc")
     def push_remote(self):
+        """Pushes to the remote repo"""
         with open(".wsvc/credentials.json") as c:
             con=c.read()
             content=json.loads(con)
         self.set_remote(content["server"], content["dir"], content["user"], content["pass"])
     def pull(self):
+        """Pulls from the remote"""
         with open(".wsvc/credentials.json") as c:
             con=c.read()
             content=json.loads(con)
@@ -164,6 +167,7 @@ class wsvc():
 
 
     def set_remote(self, addr, dirr, user, password, htmladdr):
+        """Sets remote"""
         with open(".wsvc/credentials.json", "w") as conf:
             out={
                 "server": addr,
@@ -253,6 +257,17 @@ optional: commitname for duplicate
 required: user
 optional: None
                   
+# setrem - set the remote repostitory
+required: host dir uname pass htmldir
+optional: None
+                  
+# pushrem - push to remote
+required: None
+optional: None
+
+# pull - grab from remote
+required: None
+optional: None                
 
 """)
     elif action=="push":
