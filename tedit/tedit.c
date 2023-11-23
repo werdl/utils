@@ -728,7 +728,7 @@ void TildeColumn(struct AppendBuffer *ab) {
     for (y = 0; y < editor.screenrows-2; y++) {
         int filerow = y + editor.RowOffset;
         char buf[32];
-        snprintf(buf,32,"%d",filerow+1);
+        // snprintf(buf,32,"%d",filerow+1);
         AppendAB(ab, "\x1b[32;1m", 8);
         AppendAB(ab,buf,strlen(buf));
         AppendAB(ab, "\x1b[30;0m ", 8);
