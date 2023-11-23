@@ -148,24 +148,29 @@ class wsvc():
         with open(".wsvc/credentials.json") as c:
             con=c.read()
             content=json.loads(con)
-        url=f"https://{content['server']}/{content['dir']+'/' if content['dir']!='public_html' else ''}wsvc"
+        url=f"https://{content['html']}/"
         print(url)
         r = requests.get(url)
         data = bs4.BeautifulSoup(r.text, "html.parser")
-        for l in data.find_all("a"):
+
+        for l in [file for file in data.find_all("a") if "." in file['href'] and "/" not in file['href'] and "wsvccommit" in file['href']]:
             r = requests.get(url + l["href"])
 
-            with open(f".wsvc/{l['href']}", "w") as file:
-                file.write(r.text)
+            if type(r.text) == str:
+                print(l['href'])
+
+                with open(f".wsvc/{l['href']}", "w") as file:
+                    file.write(r.text)
 
 
-    def set_remote(self, addr, dirr, user, password):
+    def set_remote(self, addr, dirr, user, password, htmladdr):
         with open(".wsvc/credentials.json", "w") as conf:
             out={
                 "server": addr,
                 "user": user,
                 "pass": password,
-                "dir": dirr
+                "dir": dirr,
+                "html": htmladdr
             }
             conf.write(json.dumps(out))
         session = ftplib.FTP(out["server"],out["user"],out["pass"])
@@ -247,6 +252,8 @@ optional: commitname for duplicate
 # setuser - set the current user (by default 'anon')
 required: user
 optional: None
+                  
+
 """)
     elif action=="push":
         instance.serialize()
@@ -262,8 +269,8 @@ optional: None
     elif action=="pull":
         instance.pull()
     elif action=="setrem":
-        err(5)
-        instance.set_remote(sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5])
+        err(6)
+        instance.set_remote(sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5], sys.argv[6])
     else:
         print("Invalid action")
 else:
